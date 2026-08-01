@@ -15,6 +15,7 @@ const (
 	CausePrimaryStatusOrMeta CauseKind = "PrimaryStatusOrMetadata"
 	CausePrimaryDelete       CauseKind = "PrimaryDelete"
 	CausePrimaryGeneric      CauseKind = "PrimaryGeneric"
+	CausePrimaryUnknown      CauseKind = "PrimaryUnknownOrRequeue"
 
 	EventCreate  EventKind = "Create"
 	EventUpdate  EventKind = "Update"
@@ -38,6 +39,8 @@ type Cause struct {
 	NewGeneration int64
 
 	GenerationChanged bool
+
+	ChangedFields []string
 
 	ObservedAt time.Time
 }

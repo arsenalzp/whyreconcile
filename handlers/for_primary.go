@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/arsenalzp/whyreconcile/causes"
@@ -256,8 +258,72 @@ func (a *Analyzer) WrapReconcile(r reconcile.Reconciler) reconcile.Reconciler {
 }
 
 func (rc *ReconcileWrapper) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = rc.a.store.Take(req)
+	causes := rc.a.store.Take(req)
+	rc.a.printReconsileTrace(req, causes)
+
 	return rc.inner.Reconcile(ctx, req)
+}
+
+func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Cause) {
+	if len(eventCauses) == 0 {
+		fmt.Printf(
+			"[whyreconcile] controller=%s request=%s/%s causes=0 cause=%s\n",
+			a.controllerName,
+			req.Namespace,
+			req.Name,
+			causes.CausePrimaryUnknown,
+		)
+
+		return
+	}
+
+	summary := make(map[causes.CauseKind]int)
+
+	for _, c := range eventCauses {
+		summary[c.Kind]++
+	}
+
+	fmt.Printf(
+		"[whyreconcile] controller=%s request=%s/%s causes=%d summary=%v\n",
+		a.controllerName,
+		req.Namespace,
+		req.Name,
+		len(eventCauses),
+		formatCauseSummary(summary),
+	)
+
+	if !a.printEventTrace {
+		return
+	}
+
+	for i, c := range eventCauses {
+		fmt.Printf(
+			"[whyreconcile] #%d watch=%s event=%s cause=%s namespace=%s name=%s resourceVersion=%s->%s generation=%d->%d observedAt=%s\n",
+			i+1,
+			c.WatchName,
+			c.EventType,
+			c.Kind,
+			c.Namespace,
+			c.Name,
+			c.OldResourceVersion,
+			c.NewResourceVersion,
+			c.OldGeneration,
+			c.NewGeneration,
+			c.ObservedAt.Format(time.RFC3339Nano),
+		)
+	}
+}
+
+func formatCauseSummary(summary map[causes.CauseKind]int) string {
+	parts := make([]string, 0, len(summary))
+
+	for kind, count := range summary {
+		parts = append(parts, fmt.Sprintf("%s:%d", kind, count))
+	}
+
+	sort.Strings(parts)
+
+	return strings.Join(parts, ", ")
 }
 
 func NewAnalyzer(name string, s store.Store, printTrace bool) *Analyzer {
