@@ -1,35 +1,31 @@
 package analyzer
 
 import (
+	"context"
 	"time"
 
 	"github.com/arsenalzp/whyreconcile/causes"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type OwnsSecondaryOpts struct {
+type SecondaryResourceHandler struct {
 	a         *Analyzer
 	watchName string
+	inner     handler.TypedEventHandler[client.Object, reconcile.Request]
 }
 
-func (oso OwnsSecondaryOpts) Create(e event.TypedCreateEvent[client.Object]) bool {
-	watch := oso.watchName
+func (hdlr SecondaryResourceHandler) Create(ctx context.Context, e event.TypedCreateEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	watch := hdlr.watchName
 	event := causes.EventCreate
 	namespace := e.Object.GetNamespace()
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
 	uid := e.Object.GetUID()
-
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-	}
 
 	cause := causes.Cause{
 		WatchName: watch,
@@ -46,30 +42,19 @@ func (oso OwnsSecondaryOpts) Create(e event.TypedCreateEvent[client.Object]) boo
 		ObservedAt: time.Now(),
 	}
 
-	oso.a.store.Add(req, cause)
+	wrappedQueue := WrapQueue(q, hdlr.a.store, cause)
 
-	if oso.a.printEventTrace {
-		cause.PrintTraceCreate()
-	}
-
-	return true
+	hdlr.inner.Create(ctx, e, wrappedQueue)
 }
 
-func (oso OwnsSecondaryOpts) Delete(e event.TypedDeleteEvent[client.Object]) bool {
-	watch := oso.watchName
+func (hdlr SecondaryResourceHandler) Delete(ctx context.Context, e event.TypedDeleteEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	watch := hdlr.watchName
 	event := causes.EventDelete
 	namespace := e.Object.GetNamespace()
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
 	uid := e.Object.GetUID()
-
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-	}
 
 	cause := causes.Cause{
 		WatchName: watch,
@@ -86,16 +71,13 @@ func (oso OwnsSecondaryOpts) Delete(e event.TypedDeleteEvent[client.Object]) boo
 		ObservedAt: time.Now(),
 	}
 
-	oso.a.store.Add(req, cause)
+	wrappedQueue := WrapQueue(q, hdlr.a.store, cause)
 
-	if oso.a.printEventTrace {
-		cause.PrintTraceDelete()
-	}
+	hdlr.inner.Delete(ctx, e, wrappedQueue)
 
-	return true
 }
 
-func (oso OwnsSecondaryOpts) Update(e event.TypedUpdateEvent[client.Object]) bool {
+func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUpdateEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	oldObj := e.ObjectOld
 	newObj := e.ObjectNew
 
@@ -106,7 +88,7 @@ func (oso OwnsSecondaryOpts) Update(e event.TypedUpdateEvent[client.Object]) boo
 		cause = causes.CauseSecondarySpecUpdate
 	}
 
-	watch := oso.watchName
+	watch := hdlr.watchName
 	event := causes.EventUpdate
 	newObjNamespace := newObj.GetNamespace()
 	newObjName := newObj.GetName()
@@ -115,13 +97,6 @@ func (oso OwnsSecondaryOpts) Update(e event.TypedUpdateEvent[client.Object]) boo
 	oldObjGeneration := oldObj.GetGeneration()
 	newObjGeneration := newObj.GetGeneration()
 	uid := newObj.GetUID()
-
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: newObjNamespace,
-			Name:      newObjName,
-		},
-	}
 
 	newCause := causes.Cause{
 		WatchName: watch,
@@ -141,30 +116,19 @@ func (oso OwnsSecondaryOpts) Update(e event.TypedUpdateEvent[client.Object]) boo
 		ObservedAt: time.Now(),
 	}
 
-	oso.a.store.Add(req, newCause)
+	wrappedQueue := WrapQueue(q, hdlr.a.store, newCause)
 
-	if oso.a.printEventTrace {
-		newCause.PrintTraceUpdate()
-	}
-
-	return true
+	hdlr.inner.Update(ctx, e, wrappedQueue)
 }
 
-func (oso OwnsSecondaryOpts) Generic(e event.TypedGenericEvent[client.Object]) bool {
-	watch := oso.watchName
+func (hdlr SecondaryResourceHandler) Generic(ctx context.Context, e event.TypedGenericEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	watch := hdlr.watchName
 	event := causes.EventGeneric
 	namespace := e.Object.GetNamespace()
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
 	uid := e.Object.GetUID()
-
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-	}
 
 	cause := causes.Cause{
 		WatchName: watch,
@@ -181,11 +145,7 @@ func (oso OwnsSecondaryOpts) Generic(e event.TypedGenericEvent[client.Object]) b
 		ObservedAt: time.Now(),
 	}
 
-	oso.a.store.Add(req, cause)
+	wrappedQueue := WrapQueue(q, hdlr.a.store, cause)
 
-	if oso.a.printEventTrace {
-		cause.PrintTraceGeneric()
-	}
-
-	return true
+	hdlr.inner.Generic(ctx, e, wrappedQueue)
 }
