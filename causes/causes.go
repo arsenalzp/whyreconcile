@@ -11,37 +11,33 @@ type EventKind string
 type ChangedField string
 
 const (
-	CauseUnknownOrRequeue CauseKind = "UnknownOrRequeue"
-
-	CausePrimaryCreate       CauseKind = "PrimaryResourceCreate"
-	CausePrimarySpecUpdate   CauseKind = "PrimaryResourceSpecUpdate"
-	CausePrimaryStatusOrMeta CauseKind = "PrimaryResourceStatusOrMetadata"
-	CausePrimaryDelete       CauseKind = "PrimaryResourceDelete"
-	CausePrimaryGeneric      CauseKind = "PrimaryResourceGeneric"
-	CausePrimaryUnknown      CauseKind = "PrimaryResourceUnknownOrRequeue"
-
+	CauseUnknownOrRequeue      CauseKind = "UnknownOrRequeue"
+	CausePrimaryCreate         CauseKind = "PrimaryResourceCreate"
+	CausePrimarySpecUpdate     CauseKind = "PrimaryResourceSpecUpdate"
+	CausePrimaryStatusOrMeta   CauseKind = "PrimaryResourceStatusOrMetadata"
+	CausePrimaryDelete         CauseKind = "PrimaryResourceDelete"
+	CausePrimaryGeneric        CauseKind = "PrimaryResourceGeneric"
+	CausePrimaryUnknown        CauseKind = "PrimaryResourceUnknownOrRequeue"
 	CauseSecondaryCreate       CauseKind = "SecondaryResourceCreate"
 	CauseSecondarySpecUpdate   CauseKind = "SecondaryResourceSpecUpdate"
 	CauseSecondaryStatusOrMeta CauseKind = "SecondaryResourceStatusOrMetadata"
 	CauseSecondaryDelete       CauseKind = "SecondaryResourceDelete"
 	CauseSecondaryGeneric      CauseKind = "SecondaryResourceGeneric"
 	CauseSecondaryUnknown      CauseKind = "SecondaryResourceUnknownOrRequeue"
-
-	CauseExternalCreate       CauseKind = "ExternalResourceCreate"
-	CauseExternalSpecUpdate   CauseKind = "ExternalResourceSpecUpdate"
-	CauseExternalStatusOrMeta CauseKind = "ExternalResourceStatusOrMetadata"
-	CauseExternalDelete       CauseKind = "ExternalResourceDelete"
-	CauseExternalGeneric      CauseKind = "ExternalResourceGeneric"
-	CauseExternalUnknown      CauseKind = "ExternalResourceUnknownOrRequeue"
+	CauseExternalCreate        CauseKind = "ExternalResourceCreate"
+	CauseExternalSpecUpdate    CauseKind = "ExternalResourceSpecUpdate"
+	CauseExternalStatusOrMeta  CauseKind = "ExternalResourceStatusOrMetadata"
+	CauseExternalDelete        CauseKind = "ExternalResourceDelete"
+	CauseExternalGeneric       CauseKind = "ExternalResourceGeneric"
+	CauseExternalUnknown       CauseKind = "ExternalResourceUnknownOrRequeue"
 
 	EventCreate  EventKind = "Create"
 	EventUpdate  EventKind = "Update"
 	EventDelete  EventKind = "Delete"
 	EventGeneric EventKind = "Generic"
 
-	FieldSpec   ChangedField = "spec"
-	FieldStatus ChangedField = "status"
-
+	FieldSpec                ChangedField = "spec"
+	FieldStatus              ChangedField = "status"
 	FieldMetadataName        ChangedField = "metadata.name"
 	FieldMetadataNamespace   ChangedField = "metadata.namespace"
 	FieldMetadataLabels      ChangedField = "metadata.labels"
