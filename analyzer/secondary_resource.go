@@ -25,16 +25,17 @@ func (hdlr SecondaryResourceHandler) Create(ctx context.Context, e event.TypedCr
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
-	uid := e.Object.GetUID()
 
 	cause := causes.Cause{
 		WatchName: watch,
 		Kind:      causes.CauseSecondaryCreate,
 		EventType: event,
 
-		Namespace: namespace,
-		Name:      name,
-		UID:       uid,
+		Source: hdlr.a.objectRef(e.Object),
+		Target: causes.RequestRef{
+			Namespace: namespace,
+			Name:      name,
+		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,
@@ -54,16 +55,17 @@ func (hdlr SecondaryResourceHandler) Delete(ctx context.Context, e event.TypedDe
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
-	uid := e.Object.GetUID()
 
 	cause := causes.Cause{
 		WatchName: watch,
 		Kind:      causes.CauseSecondaryDelete,
 		EventType: event,
 
-		Namespace: namespace,
-		Name:      name,
-		UID:       uid,
+		Source: hdlr.a.objectRef(e.Object),
+		Target: causes.RequestRef{
+			Namespace: namespace,
+			Name:      name,
+		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,
@@ -96,16 +98,17 @@ func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUp
 	newObjResourceVersion := newObj.GetResourceVersion()
 	oldObjGeneration := oldObj.GetGeneration()
 	newObjGeneration := newObj.GetGeneration()
-	uid := newObj.GetUID()
 
 	newCause := causes.Cause{
 		WatchName: watch,
 		Kind:      cause,
 		EventType: event,
 
-		Namespace: newObjNamespace,
-		Name:      newObjName,
-		UID:       uid,
+		Source: hdlr.a.objectRef(newObj),
+		Target: causes.RequestRef{
+			Namespace: newObjNamespace,
+			Name:      newObjName,
+		},
 
 		OldResourceVersion: oldObjResourceVersion,
 		NewResourceVersion: newObjResourceVersion,
@@ -128,16 +131,17 @@ func (hdlr SecondaryResourceHandler) Generic(ctx context.Context, e event.TypedG
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
-	uid := e.Object.GetUID()
 
 	cause := causes.Cause{
 		WatchName: watch,
 		Kind:      causes.CauseSecondaryGeneric,
 		EventType: event,
 
-		Namespace: namespace,
-		Name:      name,
-		UID:       uid,
+		Source: hdlr.a.objectRef(e.Object),
+		Target: causes.RequestRef{
+			Namespace: namespace,
+			Name:      name,
+		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,

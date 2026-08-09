@@ -7,10 +7,12 @@ import (
 
 	"github.com/arsenalzp/whyreconcile/causes"
 	"github.com/arsenalzp/whyreconcile/store"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -20,6 +22,7 @@ type Analyzer struct {
 	controllerName  string
 	store           store.Store
 	printEventTrace bool
+	scheme          *runtime.Scheme
 }
 
 // This type is used to hold original Reconciler
@@ -109,6 +112,25 @@ func (qw *QueueWrapper) NumRequeues(req reconcile.Request) int {
 	return qw.inner.NumRequeues(req)
 }
 
+func (a *Analyzer) objectRef(obj client.Object) causes.ObjectRef {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+
+	if gvk.Empty() && a.scheme != nil {
+		resolvedGVK, err := apiutil.GVKForObject(obj, a.scheme)
+		if err == nil {
+			gvk = resolvedGVK
+		}
+	}
+
+	return causes.ObjectRef{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		Namespace:  obj.GetNamespace(),
+		Name:       obj.GetName(),
+		UID:        obj.GetUID(),
+	}
+}
+
 func (a *Analyzer) NewForPrimaryOpts(watchName string, preds ...predicate.Predicate) builder.ForOption {
 	p := ForPrimaryOpts{
 		a:         a,
@@ -149,14 +171,16 @@ func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Ca
 		summary[c.Kind]++
 	}
 
-	fmt.Printf(
-		"[whyreconcile] controller=%s request=%s/%s causes=%d summary=%v\n",
-		a.controllerName,
-		req.Namespace,
-		req.Name,
-		len(eventCauses),
-		formatCauseSummary(summary),
-	)
+	for _, c := range eventCauses {
+		fmt.Printf(
+			"[whyreconcile] controller=%s source=%s target=%s causes=%d summary=%v\n",
+			a.controllerName,
+			formatObjectRef(c.Source),
+			formatRequestRef(c.Target),
+			len(eventCauses),
+			formatCauseSummary(summary),
+		)
+	}
 
 	if !a.printEventTrace {
 		return
@@ -164,13 +188,13 @@ func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Ca
 
 	for i, c := range eventCauses {
 		fmt.Printf(
-			"[whyreconcile] #%d watch=%s event=%s cause=%s namespace=%s name=%s resourceVersion=%s->%s generation=%d->%d observedAt=%s\n",
+			"[whyreconcile] #%d watch=%s event=%s cause=%s source=%s target=%s namespace=%s name=%s resourceVersion=%s->%s generation=%d->%d observedAt=%s\n",
 			i+1,
 			c.WatchName,
 			c.EventType,
 			c.Kind,
-			c.Namespace,
-			c.Name,
+			formatObjectRef(c.Source),
+			formatRequestRef(c.Target),
 			c.OldResourceVersion,
 			c.NewResourceVersion,
 			c.OldGeneration,
@@ -180,7 +204,7 @@ func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Ca
 	}
 }
 
-func NewAnalyzer(name string, s store.Store, printTrace bool) *Analyzer {
+func NewAnalyzer(name string, s store.Store, printTrace bool, scheme *runtime.Scheme) *Analyzer {
 	if s == nil {
 		s = store.NewCauseStore()
 	}
@@ -189,5 +213,6 @@ func NewAnalyzer(name string, s store.Store, printTrace bool) *Analyzer {
 		controllerName:  name,
 		store:           s,
 		printEventTrace: printTrace,
+		scheme:          scheme,
 	}
 }

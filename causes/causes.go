@@ -51,14 +51,28 @@ const (
 	FieldGeneration          ChangedField = "metadata.generation"
 )
 
+type ObjectRef struct {
+	APIVersion string
+	Kind       string
+	Namespace  string
+	Name       string
+	UID        types.UID
+}
+
+type RequestRef struct {
+	Namespace string
+	Name      string
+}
+
+// The Cause structure represent the cause of event and keeps information
+// about a source object and atarget object
 type Cause struct {
 	WatchName string
 	Kind      CauseKind
 	EventType EventKind
 
-	Namespace string
-	Name      string
-	UID       types.UID
+	Source ObjectRef
+	Target RequestRef
 
 	OldResourceVersion string
 	NewResourceVersion string
@@ -78,8 +92,8 @@ func (c Cause) PrintTraceCreate() {
 		"[whyreconcile] watch=%s event=%s namespace=%s name=%s resourceVersion=%s generation=%d\n",
 		c.WatchName,
 		c.Kind,
-		c.Namespace,
-		c.Name,
+		c.Source.Namespace,
+		c.Source.Name,
 		c.NewResourceVersion,
 		c.NewGeneration,
 	)
@@ -90,8 +104,8 @@ func (c Cause) PrintTraceDelete() {
 		"[whyreconcile] watch=%s event=%s namespace=%s name=%s resourceVersion=%s generation=%d\n",
 		c.WatchName,
 		c.Kind,
-		c.Namespace,
-		c.Name,
+		c.Source.Namespace,
+		c.Source.Name,
 		c.NewResourceVersion,
 		c.NewGeneration,
 	)
@@ -106,8 +120,8 @@ func (c Cause) PrintTraceUpdate() {
 		c.WatchName,
 		c.EventType,
 		c.Kind,
-		c.Namespace,
-		c.Name,
+		c.Source.Namespace,
+		c.Source.Name,
 		c.OldResourceVersion,
 		c.NewResourceVersion,
 		c.OldGeneration,
@@ -121,8 +135,8 @@ func (c Cause) PrintTraceGeneric() {
 		"[whyreconcile] watch=%s event=%s namespace=%s name=%s resourceVersion=%s generation=%d\n",
 		c.WatchName,
 		c.Kind,
-		c.Namespace,
-		c.Name,
+		c.Source.Namespace,
+		c.Source.Name,
 		c.NewResourceVersion,
 		c.NewGeneration,
 	)

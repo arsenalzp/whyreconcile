@@ -22,7 +22,6 @@ func (fpo ForPrimaryOpts) Create(e event.TypedCreateEvent[client.Object]) bool {
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
-	uid := e.Object.GetUID()
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -36,9 +35,11 @@ func (fpo ForPrimaryOpts) Create(e event.TypedCreateEvent[client.Object]) bool {
 		Kind:      causes.CausePrimaryCreate,
 		EventType: event,
 
-		Namespace: namespace,
-		Name:      name,
-		UID:       uid,
+		Source: fpo.a.objectRef(e.Object),
+		Target: causes.RequestRef{
+			Namespace: namespace,
+			Name:      name,
+		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,
@@ -62,7 +63,6 @@ func (fpo ForPrimaryOpts) Delete(e event.TypedDeleteEvent[client.Object]) bool {
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
-	uid := e.Object.GetUID()
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -76,9 +76,11 @@ func (fpo ForPrimaryOpts) Delete(e event.TypedDeleteEvent[client.Object]) bool {
 		Kind:      causes.CausePrimaryDelete,
 		EventType: event,
 
-		Namespace: namespace,
-		Name:      name,
-		UID:       uid,
+		Source: fpo.a.objectRef(e.Object),
+		Target: causes.RequestRef{
+			Namespace: namespace,
+			Name:      name,
+		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,
@@ -114,7 +116,6 @@ func (fpo ForPrimaryOpts) Update(e event.TypedUpdateEvent[client.Object]) bool {
 	newObjResourceVersion := newObj.GetResourceVersion()
 	oldObjGeneration := oldObj.GetGeneration()
 	newObjGeneration := newObj.GetGeneration()
-	uid := newObj.GetUID()
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -128,9 +129,11 @@ func (fpo ForPrimaryOpts) Update(e event.TypedUpdateEvent[client.Object]) bool {
 		Kind:      cause,
 		EventType: event,
 
-		Namespace: newObjNamespace,
-		Name:      newObjName,
-		UID:       uid,
+		Source: fpo.a.objectRef(newObj),
+		Target: causes.RequestRef{
+			Namespace: newObjNamespace,
+			Name:      newObjName,
+		},
 
 		OldResourceVersion: oldObjResourceVersion,
 		NewResourceVersion: newObjResourceVersion,
@@ -157,7 +160,6 @@ func (fpo ForPrimaryOpts) Generic(e event.TypedGenericEvent[client.Object]) bool
 	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
-	uid := e.Object.GetUID()
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -171,9 +173,11 @@ func (fpo ForPrimaryOpts) Generic(e event.TypedGenericEvent[client.Object]) bool
 		Kind:      causes.CausePrimaryGeneric,
 		EventType: event,
 
-		Namespace: namespace,
-		Name:      name,
-		UID:       uid,
+		Source: fpo.a.objectRef(e.Object),
+		Target: causes.RequestRef{
+			Namespace: namespace,
+			Name:      name,
+		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,

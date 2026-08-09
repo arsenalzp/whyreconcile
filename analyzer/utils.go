@@ -123,3 +123,23 @@ func detectChangedFields(oldObj, newObj client.Object) []causes.ChangedField {
 
 	return fields
 }
+
+func formatObjectRef(ref causes.ObjectRef) string {
+	kind := ref.Kind
+	if kind == "" {
+		kind = "Object"
+	}
+
+	if ref.Namespace == "" {
+		return fmt.Sprintf("%s/%s", kind, ref.Name)
+	}
+
+	return fmt.Sprintf("%s/%s/%s", kind, ref.Namespace, ref.Name)
+}
+
+func formatRequestRef(ref causes.RequestRef) string {
+	if ref.Namespace == "" {
+		return ref.Name
+	}
+	return ref.Namespace + "/" + ref.Name
+}
