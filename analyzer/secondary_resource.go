@@ -116,6 +116,8 @@ func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUp
 		OldGeneration: oldObjGeneration,
 		NewGeneration: newObjGeneration,
 
+		ChangedFields: detectChangedFields(oldObj, newObj),
+
 		ObservedAt: time.Now(),
 	}
 

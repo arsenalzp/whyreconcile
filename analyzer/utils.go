@@ -81,6 +81,7 @@ func objectAsMap(obj client.Object) (map[string]any, bool) {
 	return m, true
 }
 
+// Detects differences between fileds in two objects
 func detectChangedFields(oldObj, newObj client.Object) []causes.ChangedField {
 	fields := make([]causes.ChangedField, 0)
 
@@ -124,6 +125,7 @@ func detectChangedFields(oldObj, newObj client.Object) []causes.ChangedField {
 	return fields
 }
 
+// Formats a source output
 func formatObjectRef(ref causes.ObjectRef) string {
 	kind := ref.Kind
 	if kind == "" {
@@ -137,6 +139,7 @@ func formatObjectRef(ref causes.ObjectRef) string {
 	return fmt.Sprintf("%s/%s/%s", kind, ref.Namespace, ref.Name)
 }
 
+// Formats a target output
 func formatRequestRef(ref causes.RequestRef) string {
 	if ref.Namespace == "" {
 		return ref.Name

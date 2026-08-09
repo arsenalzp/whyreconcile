@@ -1,7 +1,6 @@
 package causes
 
 import (
-	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -82,62 +81,7 @@ type Cause struct {
 
 	GenerationChanged bool
 
-	ChangedFields []string
+	ChangedFields []ChangedField
 
 	ObservedAt time.Time
-}
-
-func (c Cause) PrintTraceCreate() {
-	fmt.Printf(
-		"[whyreconcile] watch=%s event=%s namespace=%s name=%s resourceVersion=%s generation=%d\n",
-		c.WatchName,
-		c.Kind,
-		c.Source.Namespace,
-		c.Source.Name,
-		c.NewResourceVersion,
-		c.NewGeneration,
-	)
-}
-
-func (c Cause) PrintTraceDelete() {
-	fmt.Printf(
-		"[whyreconcile] watch=%s event=%s namespace=%s name=%s resourceVersion=%s generation=%d\n",
-		c.WatchName,
-		c.Kind,
-		c.Source.Namespace,
-		c.Source.Name,
-		c.NewResourceVersion,
-		c.NewGeneration,
-	)
-}
-
-func (c Cause) PrintTraceUpdate() {
-	// Check wheather an object generation was changed, true or false
-	generationChanged := c.OldGeneration != c.NewGeneration
-
-	fmt.Printf(
-		"[whyreconcile] watch=%s event=%s cause=%s namespace=%s name=%s resourceVersion=%s->%s generation=%d->%d generationChanged=%t\n",
-		c.WatchName,
-		c.EventType,
-		c.Kind,
-		c.Source.Namespace,
-		c.Source.Name,
-		c.OldResourceVersion,
-		c.NewResourceVersion,
-		c.OldGeneration,
-		c.NewGeneration,
-		generationChanged,
-	)
-}
-
-func (c Cause) PrintTraceGeneric() {
-	fmt.Printf(
-		"[whyreconcile] watch=%s event=%s namespace=%s name=%s resourceVersion=%s generation=%d\n",
-		c.WatchName,
-		c.Kind,
-		c.Source.Namespace,
-		c.Source.Name,
-		c.NewResourceVersion,
-		c.NewGeneration,
-	)
 }

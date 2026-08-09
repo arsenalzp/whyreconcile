@@ -2,11 +2,11 @@ package analyzer
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/arsenalzp/whyreconcile/causes"
 	"github.com/arsenalzp/whyreconcile/store"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -23,6 +23,7 @@ type Analyzer struct {
 	store           store.Store
 	printEventTrace bool
 	scheme          *runtime.Scheme
+	log             logr.Logger
 }
 
 // This type is used to hold original Reconciler
@@ -112,6 +113,9 @@ func (qw *QueueWrapper) NumRequeues(req reconcile.Request) int {
 	return qw.inner.NumRequeues(req)
 }
 
+// Marshall an object into ObjectRef structure.
+// If the object's GVK is empty then get the necessary information
+// from the runtime Scheme
 func (a *Analyzer) objectRef(obj client.Object) causes.ObjectRef {
 	gvk := obj.GetObjectKind().GroupVersionKind()
 
@@ -131,6 +135,7 @@ func (a *Analyzer) objectRef(obj client.Object) causes.ObjectRef {
 	}
 }
 
+// Create a new predicates wrapper for Primary resource
 func (a *Analyzer) NewForPrimaryOpts(watchName string, preds ...predicate.Predicate) builder.ForOption {
 	p := ForPrimaryOpts{
 		a:         a,
@@ -142,6 +147,7 @@ func (a *Analyzer) NewForPrimaryOpts(watchName string, preds ...predicate.Predic
 	return builder.WithPredicates(predicates...)
 }
 
+// Create a new handler wrapper for Secondary (owned) resource
 func (a *Analyzer) NewSecondaryHandler(watchName string, inner handler.TypedEventHandler[client.Object, reconcile.Request]) handler.TypedEventHandler[client.Object, reconcile.Request] {
 	h := SecondaryResourceHandler{
 		a:         a,
@@ -153,13 +159,18 @@ func (a *Analyzer) NewSecondaryHandler(watchName string, inner handler.TypedEven
 }
 
 func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Cause) {
+	target := causes.RequestRef{
+		Namespace: req.Namespace,
+		Name:      req.Name,
+	}
+
 	if len(eventCauses) == 0 {
-		fmt.Printf(
-			"[whyreconcile] controller=%s request=%s/%s causes=0 cause=%s\n",
-			a.controllerName,
-			req.Namespace,
-			req.Name,
-			causes.CausePrimaryUnknown,
+		a.log.Info(
+			"reconcile cause",
+			"controller", a.controllerName,
+			"target", formatRequestRef(target),
+			"cuases", 0,
+			"cause", causes.CausePrimaryUnknown,
 		)
 
 		return
@@ -172,13 +183,13 @@ func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Ca
 	}
 
 	for _, c := range eventCauses {
-		fmt.Printf(
-			"[whyreconcile] controller=%s source=%s target=%s causes=%d summary=%v\n",
-			a.controllerName,
-			formatObjectRef(c.Source),
-			formatRequestRef(c.Target),
-			len(eventCauses),
-			formatCauseSummary(summary),
+		a.log.Info(
+			"reconcile causes",
+			"controller", a.controllerName,
+			"source", formatObjectRef(c.Source),
+			"target", formatRequestRef(c.Target),
+			"causes", len(eventCauses),
+			"summary", formatCauseSummary(summary),
 		)
 	}
 
@@ -187,26 +198,31 @@ func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Ca
 	}
 
 	for i, c := range eventCauses {
-		fmt.Printf(
-			"[whyreconcile] #%d watch=%s event=%s cause=%s source=%s target=%s namespace=%s name=%s resourceVersion=%s->%s generation=%d->%d observedAt=%s\n",
-			i+1,
-			c.WatchName,
-			c.EventType,
-			c.Kind,
-			formatObjectRef(c.Source),
-			formatRequestRef(c.Target),
-			c.OldResourceVersion,
-			c.NewResourceVersion,
-			c.OldGeneration,
-			c.NewGeneration,
-			c.ObservedAt.Format(time.RFC3339Nano),
+		a.log.Info(
+			"reconcile cause detail",
+			"index", i+1,
+			"watch", c.WatchName,
+			"event", c.EventType,
+			"cause", c.Kind,
+			"source", formatObjectRef(c.Source),
+			"target", formatRequestRef(c.Target),
+			"oldResourceVersion", c.OldResourceVersion,
+			"newResourceVersion", c.NewResourceVersion,
+			"oldGeneration", c.OldGeneration,
+			"newGeneration", c.NewGeneration,
+			"changedFields", c.ChangedFields,
+			"observedAt", c.ObservedAt.Format(time.RFC3339Nano),
 		)
 	}
 }
 
-func NewAnalyzer(name string, s store.Store, printTrace bool, scheme *runtime.Scheme) *Analyzer {
+func NewAnalyzer(name string, s store.Store, printTrace bool, scheme *runtime.Scheme, log logr.Logger) *Analyzer {
 	if s == nil {
 		s = store.NewCauseStore()
+	}
+
+	if log.GetSink() == nil {
+		log = logr.Logger{} // this expression is equal to logr.Discard()
 	}
 
 	return &Analyzer{
@@ -214,5 +230,6 @@ func NewAnalyzer(name string, s store.Store, printTrace bool, scheme *runtime.Sc
 		store:           s,
 		printEventTrace: printTrace,
 		scheme:          scheme,
+		log:             log,
 	}
 }

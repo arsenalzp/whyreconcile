@@ -49,10 +49,6 @@ func (fpo ForPrimaryOpts) Create(e event.TypedCreateEvent[client.Object]) bool {
 
 	fpo.a.store.Add(req, cause)
 
-	if fpo.a.printEventTrace {
-		cause.PrintTraceCreate()
-	}
-
 	return true
 }
 
@@ -89,10 +85,6 @@ func (fpo ForPrimaryOpts) Delete(e event.TypedDeleteEvent[client.Object]) bool {
 	}
 
 	fpo.a.store.Add(req, cause)
-
-	if fpo.a.printEventTrace {
-		cause.PrintTraceDelete()
-	}
 
 	return true
 }
@@ -141,14 +133,12 @@ func (fpo ForPrimaryOpts) Update(e event.TypedUpdateEvent[client.Object]) bool {
 		OldGeneration: oldObjGeneration,
 		NewGeneration: newObjGeneration,
 
+		ChangedFields: detectChangedFields(oldObj, newObj),
+
 		ObservedAt: time.Now(),
 	}
 
 	fpo.a.store.Add(req, newCause)
-
-	if fpo.a.printEventTrace {
-		newCause.PrintTraceUpdate()
-	}
 
 	return true
 }
@@ -186,10 +176,6 @@ func (fpo ForPrimaryOpts) Generic(e event.TypedGenericEvent[client.Object]) bool
 	}
 
 	fpo.a.store.Add(req, cause)
-
-	if fpo.a.printEventTrace {
-		cause.PrintTraceGeneric()
-	}
 
 	return true
 }
