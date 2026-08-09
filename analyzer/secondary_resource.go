@@ -21,8 +21,6 @@ type SecondaryResourceHandler struct {
 func (hdlr SecondaryResourceHandler) Create(ctx context.Context, e event.TypedCreateEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	watch := hdlr.watchName
 	event := causes.EventCreate
-	namespace := e.Object.GetNamespace()
-	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
 
@@ -32,10 +30,6 @@ func (hdlr SecondaryResourceHandler) Create(ctx context.Context, e event.TypedCr
 		EventType: event,
 
 		Source: hdlr.a.objectRef(e.Object),
-		Target: causes.RequestRef{
-			Namespace: namespace,
-			Name:      name,
-		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,
@@ -51,8 +45,6 @@ func (hdlr SecondaryResourceHandler) Create(ctx context.Context, e event.TypedCr
 func (hdlr SecondaryResourceHandler) Delete(ctx context.Context, e event.TypedDeleteEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	watch := hdlr.watchName
 	event := causes.EventDelete
-	namespace := e.Object.GetNamespace()
-	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
 
@@ -62,10 +54,6 @@ func (hdlr SecondaryResourceHandler) Delete(ctx context.Context, e event.TypedDe
 		EventType: event,
 
 		Source: hdlr.a.objectRef(e.Object),
-		Target: causes.RequestRef{
-			Namespace: namespace,
-			Name:      name,
-		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,
@@ -92,8 +80,6 @@ func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUp
 
 	watch := hdlr.watchName
 	event := causes.EventUpdate
-	newObjNamespace := newObj.GetNamespace()
-	newObjName := newObj.GetName()
 	oldObjResourceVersion := oldObj.GetResourceVersion()
 	newObjResourceVersion := newObj.GetResourceVersion()
 	oldObjGeneration := oldObj.GetGeneration()
@@ -105,10 +91,6 @@ func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUp
 		EventType: event,
 
 		Source: hdlr.a.objectRef(newObj),
-		Target: causes.RequestRef{
-			Namespace: newObjNamespace,
-			Name:      newObjName,
-		},
 
 		OldResourceVersion: oldObjResourceVersion,
 		NewResourceVersion: newObjResourceVersion,
@@ -116,7 +98,8 @@ func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUp
 		OldGeneration: oldObjGeneration,
 		NewGeneration: newObjGeneration,
 
-		ChangedFields: detectChangedFields(oldObj, newObj),
+		GenerationChanged: generationChanged,
+		ChangedFields:     detectChangedFields(oldObj, newObj),
 
 		ObservedAt: time.Now(),
 	}
@@ -129,8 +112,6 @@ func (hdlr SecondaryResourceHandler) Update(ctx context.Context, e event.TypedUp
 func (hdlr SecondaryResourceHandler) Generic(ctx context.Context, e event.TypedGenericEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	watch := hdlr.watchName
 	event := causes.EventGeneric
-	namespace := e.Object.GetNamespace()
-	name := e.Object.GetName()
 	resourceVersion := e.Object.GetResourceVersion()
 	generation := e.Object.GetGeneration()
 
@@ -140,10 +121,6 @@ func (hdlr SecondaryResourceHandler) Generic(ctx context.Context, e event.TypedG
 		EventType: event,
 
 		Source: hdlr.a.objectRef(e.Object),
-		Target: causes.RequestRef{
-			Namespace: namespace,
-			Name:      name,
-		},
 
 		NewResourceVersion: resourceVersion,
 		NewGeneration:      generation,

@@ -6,11 +6,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type CauseKind = string
-type EventKind = string
-type ChangedField = string
+type CauseKind string
+type EventKind string
+type ChangedField string
 
 const (
+	CauseUnknownOrRequeue CauseKind = "UnknownOrRequeue"
+
 	CausePrimaryCreate       CauseKind = "PrimaryResourceCreate"
 	CausePrimarySpecUpdate   CauseKind = "PrimaryResourceSpecUpdate"
 	CausePrimaryStatusOrMeta CauseKind = "PrimaryResourceStatusOrMetadata"

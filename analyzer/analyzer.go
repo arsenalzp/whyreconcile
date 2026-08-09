@@ -19,11 +19,11 @@ import (
 )
 
 type Analyzer struct {
-	controllerName  string
-	store           store.Store
-	printEventTrace bool
-	scheme          *runtime.Scheme
-	log             logr.Logger
+	controllerName    string
+	store             store.Store
+	printCauseDetails bool
+	scheme            *runtime.Scheme
+	log               logr.Logger
 }
 
 // This type is used to hold original Reconciler
@@ -64,23 +64,33 @@ func (a *Analyzer) WrapReconcile(r reconcile.Reconciler) reconcile.Reconciler {
 // Reconciler wrapper around the original Reconciler
 func (rc *ReconcileWrapper) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	causes := rc.a.store.Take(req)
-	rc.a.printReconsileTrace(req, causes)
+	rc.a.printReconcileTrace(req, causes)
 
 	return rc.inner.Reconcile(ctx, req)
 }
 
+func (qw *QueueWrapper) enrichCause(cause causes.Cause, req reconcile.Request) causes.Cause {
+	c := cause
+	c.Target = causes.RequestRef{
+		Namespace: req.Namespace,
+		Name:      req.Name,
+	}
+
+	return c
+}
+
 func (qw *QueueWrapper) Add(req reconcile.Request) {
-	qw.store.Add(req, qw.cause)
+	qw.store.Add(req, qw.enrichCause(qw.cause, req))
 	qw.inner.Add(req)
 }
 
 func (qw *QueueWrapper) AddAfter(req reconcile.Request, duration time.Duration) {
-	qw.store.Add(req, qw.cause)
+	qw.store.Add(req, qw.enrichCause(qw.cause, req))
 	qw.inner.AddAfter(req, duration)
 }
 
 func (qw *QueueWrapper) AddRateLimited(req reconcile.Request) {
-	qw.store.Add(req, qw.cause)
+	qw.store.Add(req, qw.enrichCause(qw.cause, req))
 	qw.inner.AddRateLimited(req)
 }
 
@@ -135,8 +145,10 @@ func (a *Analyzer) objectRef(obj client.Object) causes.ObjectRef {
 	}
 }
 
-// Create a new predicates wrapper for Primary resource
-func (a *Analyzer) NewForPrimaryOpts(watchName string, preds ...predicate.Predicate) builder.ForOption {
+// Creates a new predicates wrapper for Primary resource.
+// The term Primary resource is used according to Kubebuilder and Operator SDK documentation.
+// The wrapper is used along For() builder's method.
+func (a *Analyzer) NewPrimaryOpts(watchName string, preds ...predicate.Predicate) builder.ForOption {
 	p := ForPrimaryOpts{
 		a:         a,
 		watchName: watchName,
@@ -147,7 +159,9 @@ func (a *Analyzer) NewForPrimaryOpts(watchName string, preds ...predicate.Predic
 	return builder.WithPredicates(predicates...)
 }
 
-// Create a new handler wrapper for Secondary (owned) resource
+// Creates a new handler wrapper for Secondary (owned) resource
+// The term Secondary resource is used according to Kubebuilder and Operator SDK documentation.
+// The handler is used along Watches() builder's method, which represents Owns() builder's method.
 func (a *Analyzer) NewSecondaryHandler(watchName string, inner handler.TypedEventHandler[client.Object, reconcile.Request]) handler.TypedEventHandler[client.Object, reconcile.Request] {
 	h := SecondaryResourceHandler{
 		a:         a,
@@ -158,42 +172,53 @@ func (a *Analyzer) NewSecondaryHandler(watchName string, inner handler.TypedEven
 	return h
 }
 
-func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Cause) {
+// Creates a new handler wrapper for External resource.
+// The term External resource is used according to Kubebuilder and Operator SDK documentation.
+// The handler is used along Watches() builder's method.
+func (a *Analyzer) NewExternalHandler(watchName string, inner handler.TypedEventHandler[client.Object, reconcile.Request]) handler.TypedEventHandler[client.Object, reconcile.Request] {
+	h := ExternalResourceHandler{
+		a:         a,
+		watchName: watchName,
+		inner:     inner,
+	}
+
+	return h
+}
+
+func (a *Analyzer) printReconcileTrace(req ctrl.Request, eventCauses []causes.Cause) {
 	target := causes.RequestRef{
 		Namespace: req.Namespace,
 		Name:      req.Name,
 	}
 
+	// Print the details when no cause found.
+	// Usually it means that the request was intentionally enqueued.
 	if len(eventCauses) == 0 {
 		a.log.Info(
 			"reconcile cause",
 			"controller", a.controllerName,
 			"target", formatRequestRef(target),
-			"cuases", 0,
-			"cause", causes.CausePrimaryUnknown,
+			"causes", 0,
+			"cause", causes.CauseUnknownOrRequeue,
 		)
 
 		return
 	}
 
 	summary := make(map[causes.CauseKind]int)
-
 	for _, c := range eventCauses {
 		summary[c.Kind]++
 	}
 
-	for _, c := range eventCauses {
-		a.log.Info(
-			"reconcile causes",
-			"controller", a.controllerName,
-			"source", formatObjectRef(c.Source),
-			"target", formatRequestRef(c.Target),
-			"causes", len(eventCauses),
-			"summary", formatCauseSummary(summary),
-		)
-	}
+	a.log.Info(
+		"reconcile causes",
+		"controller", a.controllerName,
+		"target", formatRequestRef(target),
+		"causes", len(eventCauses),
+		"summary", formatCauseSummary(summary),
+	)
 
-	if !a.printEventTrace {
+	if !a.printCauseDetails {
 		return
 	}
 
@@ -216,7 +241,21 @@ func (a *Analyzer) printReconsileTrace(req ctrl.Request, eventCauses []causes.Ca
 	}
 }
 
-func NewAnalyzer(name string, s store.Store, printTrace bool, scheme *runtime.Scheme, log logr.Logger) *Analyzer {
+// Creates a new instance of whyreconcile analyzer with the given name
+// It is possible to use your own reconcilation cause store, just implement the Store interface
+// with thread-safe methods.
+// To print out changed fields use printCauseDetails parameter, it shows which fields were changed therefore could
+// enqueue reconcile requests.
+// The following fields are compared, however the list could be extended easily:
+// metadata.name
+// metadata.namespace
+// metadata.labels
+// metadata.annotations
+// metadata.finalizers
+// metadata.ownerReferences
+// metadata.deletionTimestamp
+// metadata.generation
+func NewAnalyzer(name string, s store.Store, printCauseDetails bool, scheme *runtime.Scheme, log logr.Logger) *Analyzer {
 	if s == nil {
 		s = store.NewCauseStore()
 	}
@@ -226,10 +265,10 @@ func NewAnalyzer(name string, s store.Store, printTrace bool, scheme *runtime.Sc
 	}
 
 	return &Analyzer{
-		controllerName:  name,
-		store:           s,
-		printEventTrace: printTrace,
-		scheme:          scheme,
-		log:             log,
+		controllerName:    name,
+		store:             s,
+		printCauseDetails: printCauseDetails,
+		scheme:            scheme,
+		log:               log,
 	}
 }

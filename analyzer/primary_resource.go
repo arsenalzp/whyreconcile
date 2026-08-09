@@ -133,7 +133,8 @@ func (fpo ForPrimaryOpts) Update(e event.TypedUpdateEvent[client.Object]) bool {
 		OldGeneration: oldObjGeneration,
 		NewGeneration: newObjGeneration,
 
-		ChangedFields: detectChangedFields(oldObj, newObj),
+		GenerationChanged: generationChanged,
+		ChangedFields:     detectChangedFields(oldObj, newObj),
 
 		ObservedAt: time.Now(),
 	}
