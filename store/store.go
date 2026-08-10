@@ -8,7 +8,7 @@ import (
 )
 
 type Store interface {
-	Add(req reconcile.Request, cause causes.Cause) bool
+	Add(req reconcile.Request, cause causes.Cause)
 	Take(req reconcile.Request) []causes.Cause
 }
 
@@ -17,13 +17,11 @@ type CauseStore struct {
 	causes map[reconcile.Request][]causes.Cause
 }
 
-func (s *CauseStore) Add(req reconcile.Request, cause causes.Cause) bool {
+func (s *CauseStore) Add(req reconcile.Request, cause causes.Cause) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.causes[req] = append(s.causes[req], cause)
-
-	return true
 }
 
 func (s *CauseStore) Take(req reconcile.Request) []causes.Cause {
