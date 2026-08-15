@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./.github/assets/gopher_whyreconcile.png" alt="Operator inspector Gopher" width="280">
+  <img src="./.github/assets/gopher_whyreconcile.png" alt="Operator inspector Gopher" width="140">
 </p>
 
 # whyreconcile
