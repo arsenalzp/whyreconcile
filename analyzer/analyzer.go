@@ -220,6 +220,8 @@ func (a *Analyzer) printReconcileTrace(req ctrl.Request, eventCauses []causes.Ca
 		"target", formatRequestRef(target),
 		"causes", len(eventCauses),
 		"summary", formatCauseSummary(summary),
+		"source", summarizeSources(eventCauses),
+		"sources", countUniqueSources(eventCauses),
 	)
 
 	if !a.printCauseDetails {

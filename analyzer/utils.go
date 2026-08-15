@@ -132,6 +132,10 @@ func formatObjectRef(ref causes.ObjectRef) string {
 		kind = "Object"
 	}
 
+	if ref.APIVersion != "" {
+		kind = ref.APIVersion + "." + kind
+	}
+
 	if ref.Namespace == "" {
 		return fmt.Sprintf("%s/%s", kind, ref.Name)
 	}
@@ -145,4 +149,40 @@ func formatRequestRef(ref causes.RequestRef) string {
 		return ref.Name
 	}
 	return ref.Namespace + "/" + ref.Name
+}
+
+func summarizeSources(eventCauses []causes.Cause) string {
+	if len(eventCauses) == 0 {
+		return "-"
+	}
+
+	seen := make(map[string]struct{})
+
+	for _, c := range eventCauses {
+		source := formatObjectRef(c.Source)
+		seen[source] = struct{}{}
+	}
+
+	if len(seen) == 1 {
+		for source := range seen {
+			return source
+		}
+	}
+
+	return "multiple"
+}
+
+func countUniqueSources(eventCauses []causes.Cause) int {
+	if len(eventCauses) == 0 {
+		return 0
+	}
+
+	seen := make(map[string]struct{})
+
+	for _, c := range eventCauses {
+		source := formatObjectRef(c.Source)
+		seen[source] = struct{}{}
+	}
+
+	return len(seen)
 }
