@@ -30,11 +30,15 @@ const (
 	CauseExternalDelete        CauseKind = "ExternalResourceDelete"
 	CauseExternalGeneric       CauseKind = "ExternalResourceGeneric"
 	CauseExternalUnknown       CauseKind = "ExternalResourceUnknownOrRequeue"
+	CauseReconcileErrorRetry   CauseKind = "ReconcileErrorRetry"
+	CauseReconcileRequeueAfter CauseKind = "ReconcileRequeueAfter"
 
-	EventCreate  EventKind = "Create"
-	EventUpdate  EventKind = "Update"
-	EventDelete  EventKind = "Delete"
-	EventGeneric EventKind = "Generic"
+	EventCreate         EventKind = "Create"
+	EventUpdate         EventKind = "Update"
+	EventDelete         EventKind = "Delete"
+	EventGeneric        EventKind = "Generic"
+	EventReconcileError EventKind = "ReconcileError"
+	EventRequeueAfter   EventKind = "RequeueAfter"
 
 	FieldSpec                ChangedField = "spec"
 	FieldStatus              ChangedField = "status"
@@ -62,7 +66,7 @@ type RequestRef struct {
 }
 
 // The Cause structure represent the cause of event and keeps information
-// about a source object and atarget object
+// about a source object and atarget object.
 type Cause struct {
 	WatchName string
 	Kind      CauseKind
@@ -80,6 +84,10 @@ type Cause struct {
 	GenerationChanged bool
 
 	ChangedFields []ChangedField
+
+	// Reconcile-derived cause metadata.
+	Error        string
+	RequeueAfter time.Duration
 
 	ObservedAt time.Time
 }

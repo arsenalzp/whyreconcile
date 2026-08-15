@@ -66,7 +66,11 @@ func (rc *ReconcileWrapper) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	causes := rc.a.store.Take(req)
 	rc.a.printReconcileTrace(req, causes)
 
-	return rc.inner.Reconcile(ctx, req)
+	result, err := rc.inner.Reconcile(ctx, req)
+
+	rc.a.recordReconcileDerivedCause(req, result, err)
+
+	return result, err
 }
 
 func (qw *QueueWrapper) enrichCause(cause causes.Cause, req reconcile.Request) causes.Cause {
@@ -238,6 +242,54 @@ func (a *Analyzer) printReconcileTrace(req ctrl.Request, eventCauses []causes.Ca
 			"changedFields", c.ChangedFields,
 			"observedAt", c.ObservedAt.Format(time.RFC3339Nano),
 		)
+	}
+}
+
+func (a *Analyzer) recordReconcileDerivedCause(req ctrl.Request, result ctrl.Result, err error) {
+	if err != nil {
+		a.store.Add(req, causes.Cause{
+			WatchName: "reconcile",
+			Kind:      causes.CauseReconcileErrorRetry,
+			EventType: causes.EventReconcileError,
+
+			Source: causes.ObjectRef{
+				Kind:      "Reconcile",
+				Namespace: req.Namespace,
+				Name:      req.Name,
+			},
+			Target: causes.RequestRef{
+				Namespace: req.Namespace,
+				Name:      req.Name,
+			},
+
+			Error:      err.Error(),
+			ObservedAt: time.Now(),
+		})
+
+		return
+	}
+
+	if result.RequeueAfter > 0 {
+		a.store.Add(req, causes.Cause{
+			WatchName: "reconcile",
+			Kind:      causes.CauseReconcileRequeueAfter,
+			EventType: causes.EventRequeueAfter,
+
+			Source: causes.ObjectRef{
+				Kind:      "Reconcile",
+				Namespace: req.Namespace,
+				Name:      req.Name,
+			},
+			Target: causes.RequestRef{
+				Namespace: req.Namespace,
+				Name:      req.Name,
+			},
+
+			RequeueAfter: result.RequeueAfter,
+			ObservedAt:   time.Now(),
+		})
+
+		return
 	}
 }
 
