@@ -4,7 +4,7 @@
 
 # whyreconcile
 
-`whyreconcile` is the diagnostic helper for Kubernetes and OpenShift controllers built with `kubebuilder` and/or `operator-sdk` on top of `controller-runtime`.
+`whyreconcile` is the diagnostic helper for Kubernetes and OpenShift controllers built with kubebuilder and/or operator-sdk on top of `controller-runtime`.
 
 It helps answer a simple question:
 
