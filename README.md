@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./.github/assets/gopher_whyreconcile.png" alt="Operator inspector Gopher" width="280">
+</p>
+
 # whyreconcile
 
 `whyreconcile` is the diagnostic helper for Kubernetes and OpenShift controllers built with `kubebuilder` and/or `operator-sdk` on top of `controller-runtime`.
